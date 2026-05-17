@@ -453,15 +453,121 @@ function toggleCart(){
   document.getElementById('cartDrawer').style.display=open?'none':'flex';
   document.getElementById('overlay').style.display=open?'none':'block';
 }
+// Regras de upsell por categoria
+const UPSELL_RULES = {
+  'Ração':      ['Petisco','Higiene','Acessórios','Brinquedo'],
+  'Petisco':    ['Ração','Brinquedo','Acessórios'],
+  'Higiene':    ['Acessórios','Petisco','Ração'],
+  'Acessórios': ['Ração','Petisco','Higiene'],
+  'Medicamento':['Higiene','Ração'],
+  'Brinquedo':  ['Petisco','Acessórios'],
+};
+
+function getSugestoes() {
+  if (!produtos.length || !cart.length) return [];
+  // categorias que o cliente já tem no carrinho
+  const catsNoCarrinho = new Set(cart.map(i => i.categoria));
+  const nomesNoCarrinho = new Set(cart.map(i => i.nome));
+
+  // quais categorias sugerir baseado no que está no carrinho
+  let catsSugeridas = new Set();
+  catsNoCarrinho.forEach(cat => {
+    (UPSELL_RULES[cat] || []).forEach(c => catsSugeridas.add(c));
+  });
+  // remove categorias que já estão no carrinho
+  catsNoCarrindo = [...catsSugeridas].filter(c => !catsNoCarrinho.has(c));
+
+  // pega até 3 produtos sugeridos (um de cada categoria sugerida, disponível)
+  let sugestoes = [];
+  for (const cat of catsSugeridas) {
+    if (sugestoes.length >= 3) break;
+    if (catsNoCarrinho.has(cat)) continue;
+    const prod = produtos.find(p =>
+      p.categoria === cat &&
+      p.estoque > 0 &&
+      !nomesNoCarrinho.has(p.nome)
+    );
+    if (prod) sugestoes.push(prod);
+  }
+  return sugestoes;
+}
+
 function renderCart(){
   const items=document.getElementById('cartItems'); const footer=document.getElementById('cartFooter');
   if(!cart.length){
     items.innerHTML='<div class="cart-vazio"><span class="cart-vazio-emoji">🛒</span><p>Seu carrinho está vazio</p></div>';
     footer.innerHTML=''; return;
   }
-  items.innerHTML=cart.map(i=>`<div class="cart-item"><div><div class="cart-item-nome">${i.nome}</div><div class="cart-item-sub">x${i.qty} × R$ ${i.preco.toFixed(2)}</div></div><div class="cart-item-preco">R$ ${(i.preco*i.qty).toFixed(2)}</div></div>`).join('');
+
+  // Itens do carrinho
+  let html = cart.map(i=>`
+    <div class="cart-item">
+      <div>
+        <div class="cart-item-nome">${i.nome}</div>
+        <div class="cart-item-sub">x${i.qty} × R$ ${i.preco.toFixed(2)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="cart-item-preco">R$ ${(i.preco*i.qty).toFixed(2)}</div>
+        <button onclick="removerCart('${i.nome}')" style="background:#FEE2E2;border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:14px;color:#dc2626;display:flex;align-items:center;justify-content:center">×</button>
+      </div>
+    </div>`).join('');
+
+  // Upsell
+  const sugestoes = getSugestoes();
+  if (sugestoes.length > 0) {
+    html += `
+    <div style="margin-top:20px;padding-top:16px;border-top:2px dashed #EDE0D4">
+      <div style="font-size:12px;font-weight:800;color:#8B6F5E;letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px">
+        🛍️ Adicione também ao seu pedido:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${sugestoes.map(p => {
+          const img = getImg(p.nome);
+          const emoji = getCatEmoji(p.categoria);
+          return `
+          <div style="display:flex;align-items:center;gap:12px;background:#FFF7F2;border-radius:14px;padding:10px;border:1.5px solid #FFD4B8">
+            <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;background:#F5EDE3;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+              ${img
+                ? `<img src="${img}" style="width:100%;height:100%;object-fit:contain;padding:4px">`
+                : `<span style="font-size:28px">${emoji}</span>`
+              }
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:#1A1208;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
+              <div style="font-size:11px;color:#8B6F5E">${p.categoria}</div>
+              <div style="font-size:15px;font-weight:800;color:#E8550A;font-family:'Playfair Display',serif">R$ ${p.preco.toFixed(2)}</div>
+            </div>
+            <button onclick="addCartProduto('${p.nome}')" style="background:#E8550A;color:white;border:none;border-radius:10px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">
+              + Incluir
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  items.innerHTML = html;
   const total=cart.reduce((a,i)=>a+i.preco*i.qty,0);
-  footer.innerHTML=`<div class="cart-total"><span>Subtotal</span><span>R$ ${total.toFixed(2)}</span></div><div class="cart-entrega-info">Frete e forma de pagamento no próximo passo</div><button class="btn-confirmar" onclick="abrirCheckout()">Finalizar Pedido ➜</button>`;
+  footer.innerHTML=`
+    <div class="cart-total"><span>Subtotal</span><span>R$ ${total.toFixed(2)}</span></div>
+    <div class="cart-entrega-info">Frete e pagamento no próximo passo</div>
+    <button class="btn-confirmar" onclick="abrirCheckout()">Finalizar Pedido ➜</button>`;
+}
+
+function removerCart(nome) {
+  cart = cart.filter(i => i.nome !== nome);
+  updateCartBadge();
+  renderCart();
+}
+
+function addCartProduto(nome) {
+  const p = produtos.find(p => p.nome === nome);
+  if (!p) return;
+  const ex = cart.find(i => i.nome === nome);
+  if (ex) ex.qty++;
+  else cart.push({...p, qty:1});
+  updateCartBadge();
+  renderCart();
 }
 
 // ── CHECKOUT ──
@@ -565,40 +671,55 @@ function finalizarPedido(){
   const total=sub+frete;
 
   // Itens
-  const itens=cart.map(i=>`%0A%E2%96%AA%EF%B8%8F ${i.nome} x${i.qty} %E2%80%94 R%24 ${(i.preco*i.qty).toFixed(2)}`).join('');
+  // monta mensagem como texto puro — WhatsApp aceita bem assim
+  const enc = s => encodeURIComponent(s);
+  const nl  = '%0A'; // quebra de linha
 
-  // Entrega
-  let entregaTxt='';
-  if(tipoEntrega==='retirada'){
-    entregaTxt='%0A%F0%9F%8F%AA *Retirada na loja*';
+  const itensLinha = cart.map(i =>
+    `   - ${i.nome} x${i.qty}  =>  R$ ${(i.preco*i.qty).toFixed(2)}`
+  ).join(nl);
+
+  let entregaLinha = '';
+  if(tipoEntrega === 'retirada'){
+    entregaLinha = enc('Retirada na loja (sem frete)');
   } else {
-    const rua=document.getElementById('ck-rua').value;
-    const num=document.getElementById('ck-num').value;
-    const bairro=document.getElementById('ck-bairro').value;
-    const comp=document.getElementById('ck-comp').value;
-    const cep=document.getElementById('ck-cep').value;
-    entregaTxt=`%0A%F0%9F%9A%9A *Entrega* (+R%24 5,00)%0A%F0%9F%93%8D ${rua}, ${num}${comp?' - '+comp:''} %E2%80%94 ${bairro}%0A%F0%9F%93%AE CEP: ${cep}`;
+    const rua    = document.getElementById('ck-rua').value;
+    const num    = document.getElementById('ck-num').value;
+    const bairro = document.getElementById('ck-bairro').value;
+    const comp   = document.getElementById('ck-comp').value;
+    const cep    = document.getElementById('ck-cep').value;
+    entregaLinha = enc(`Entrega: ${rua}, ${num}${comp?' - '+comp:''} - ${bairro} | CEP: ${cep} | Frete: R$ 5,00`);
   }
 
-  // Pagamento
-  let pagTxt='';
-  if(tipoPagamento==='dinheiro'){
-    const troco=tipoTroco==='sim'?` (troco para R$ ${document.getElementById('troco-valor').value})`:'';
-    pagTxt=`%0A%F0%9F%92%B5 *Dinheiro na entrega*${troco?encodeURIComponent(troco):''}`;
-  } else if(tipoPagamento==='pix'){
-    pagTxt=`%0A%F0%9F%93%B1 *Pix* %E2%80%94 Chave: ${PIX_KEY} (${PIX_NAME})`;
+  let pagLinha = '';
+  if(tipoPagamento === 'dinheiro'){
+    const troco = tipoTroco==='sim' ? ` | Troco para: R$ ${document.getElementById('troco-valor').value}` : ' | Sem troco';
+    pagLinha = enc('Dinheiro na entrega' + troco);
+  } else if(tipoPagamento === 'pix'){
+    pagLinha = enc(`Pix | Chave: ${PIX_KEY} | Nome: ${PIX_NAME}`);
   } else {
-    pagTxt='%0A%F0%9F%92%B3 *Cart%C3%A3o na entrega*';
+    pagLinha = enc('Cartao na entrega');
   }
 
-  const msg=`*%F0%9F%90%BE Pedido PetShop do Z%C3%A9*%0A%0A`+
-    `%F0%9F%91%A4 *Cliente:* ${encodeURIComponent(nome)}%0A%0A`+
-    `%F0%9F%9B%92 *Itens:*${itens}%0A%0A`+
-    `%F0%9F%92%B0 Subtotal: R%24 ${sub.toFixed(2)}%0A`+
-    (frete>0?`%F0%9F%9A%9A Frete: R%24 5,00%0A`:'')+
-    `%E2%9C%85 *Total: R%24 ${total.toFixed(2)}*%0A%0A`+
-    entregaTxt+'%0A'+pagTxt+
-    `%0A%0A%E2%8F%B0 Aguardo confirma%C3%A7%C3%A3o! %F0%9F%98%8A`;
+  const msg =
+    enc('=== PEDIDO PETSHOP DO ZE ===') + nl +
+    nl +
+    enc(`Cliente: ${nome}`) + nl +
+    nl +
+    enc('--- ITENS ---') + nl +
+    enc(cart.map(i => `  ${i.nome} x${i.qty}  =>  R$ ${(i.preco*i.qty).toFixed(2)}`).join('\n')) + nl +
+    nl +
+    enc(`Subtotal:  R$ ${sub.toFixed(2)}`) + nl +
+    (frete > 0 ? enc(`Frete:     R$ 5,00`) + nl : '') +
+    enc(`TOTAL:     R$ ${total.toFixed(2)}`) + nl +
+    nl +
+    enc('--- ENTREGA ---') + nl +
+    entregaLinha + nl +
+    nl +
+    enc('--- PAGAMENTO ---') + nl +
+    pagLinha + nl +
+    nl +
+    enc('Aguardo confirmacao!');
 
   window.open(`https://wa.me/${WPP}?text=${msg}`,'_blank');
   fecharCheckout();
@@ -687,16 +808,28 @@ function confirmarAgendamento(){
   const extra=logistica==='buscar'?15:0;
   const total=precServico+extra;
   const logTxt=logistica==='buscar'?'%F0%9F%9A%97 *Busca incluída* (+R%24 15)':'%F0%9F%8F%AA *O cliente vai levar na loja*';
-  const msg=`*%F0%9F%90%BE Agendamento PetShop do Z%C3%A9*%0A%0A`+
-    `%F0%9F%91%A4 *Cliente:* ${encodeURIComponent(nome)}%0A`+
-    `%F0%9F%90%B6 *Pet:* ${encodeURIComponent(pet)}%0A`+
-    (tel?`%F0%9F%93%B1 *Telefone:* ${encodeURIComponent(tel)}%0A`:'')+
-    `%0A%E2%9C%82%EF%B8%8F *Servi%C3%A7o:* Banho e Tosa Porte ${nomes[servicoSel]}%0A`+
-    `%F0%9F%93%85 *Data:* ${diaSel} de ${MESES[calAtual.mes]}%0A`+
-    `%E2%8F%B0 *Hor%C3%A1rio:* ${horarioSel}%0A`+
-    `${logTxt}%0A%0A`+
-    `%F0%9F%92%B0 *Total: R%24 ${total}*%0A%0A`+
-    `%E2%9C%85 Aguardo confirma%C3%A7%C3%A3o!`;
+  const enc2 = s => encodeURIComponent(s);
+  const nl2   = '%0A';
+  const logistica_txt = logistica==='buscar'
+    ? `Busca inclusa (+R$ 15,00)`
+    : `Cliente vai levar na loja`;
+
+  const msg =
+    enc2('=== AGENDAMENTO PETSHOP DO ZE ===') + nl2 +
+    nl2 +
+    enc2(`Cliente:   ${nome}`) + nl2 +
+    enc2(`Pet:       ${pet}`) + nl2 +
+    (tel ? enc2(`Telefone:  ${tel}`) + nl2 : '') +
+    nl2 +
+    enc2('--- SERVICO ---') + nl2 +
+    enc2(`Banho e Tosa - Porte ${nomes[servicoSel]}`) + nl2 +
+    enc2(`Data:      ${diaSel} de ${MESES[calAtual.mes]}`) + nl2 +
+    enc2(`Horario:   ${horarioSel}`) + nl2 +
+    enc2(`Logistica: ${logistica_txt}`) + nl2 +
+    nl2 +
+    enc2(`TOTAL:     R$ ${total}`) + nl2 +
+    nl2 +
+    enc2('Aguardo confirmacao!');
   window.open(`https://wa.me/${WPP}?text=${msg}`,'_blank');
   document.getElementById('sucesso-agendamento').style.display='block';
   document.getElementById('sucesso-agendamento').innerHTML=`<div class="sucesso-card"><div class="sucesso-icon">✅</div><div><div class="sucesso-titulo">Agendamento enviado!</div><div class="sucesso-info">${pet} (${nome}) — ${diaSel} de ${MESES[calAtual.mes]} às ${horarioSel}</div></div></div>`;
