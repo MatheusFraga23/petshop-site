@@ -479,7 +479,10 @@ async function carregarProdutos() {
   try {
     const res  = await fetch(API_URL);
     const text = await res.text();
-    const json = JSON.parse(text.replace(/^.*?\(/, '').replace(/\);?$/, ''));
+    const inicio = text.indexOf('{');
+    const fim    = text.lastIndexOf('}');
+    if (inicio === -1) throw new Error('Planilha não retornou dados. Verifique se está publicada na web.');
+    const json = JSON.parse(text.substring(inicio, fim + 1));
     const rows = json.table.rows;
 
     produtos = rows.map(row => ({
