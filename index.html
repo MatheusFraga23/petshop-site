@@ -34,6 +34,12 @@ header{background:var(--escuro);padding:0 24px;position:sticky;top:0;z-index:100
 .live-badge{display:inline-flex;align-items:center;gap:6px;background:#DCFCE7;color:var(--verde);padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:24px;}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.search-bar-wrapper{position:relative;margin-bottom:20px;max-width:500px;}
+.search-input{width:100%;padding:14px 48px 14px 48px;border:2px solid #DDD3C8;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:white;transition:all .2s;font-weight:500;}
+.search-input:focus{border-color:var(--laranja);box-shadow:0 0 0 4px rgba(232,85,10,.1);}
+.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none;opacity:.5;}
+.search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:#F5EDE3;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px;font-weight:700;color:#8B6F5E;}
+.search-clear:hover{background:#E8550A;color:white;}
 .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
 .filtro-btn{padding:8px 18px;border-radius:99px;border:1.5px solid #DDD3C8;background:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--texto);}
 .filtro-btn:hover{border-color:var(--laranja);color:var(--laranja);}
@@ -176,6 +182,13 @@ header{background:var(--escuro);padding:0 24px;position:sticky;top:0;z-index:100
     <div class="live-badge"><div class="live-dot"></div>ATUALIZADO EM TEMPO REAL</div>
     <h2 class="section-title">Nossos Produtos</h2>
     <p class="section-sub">Adicione ao carrinho e finalize pelo WhatsApp.</p>
+    <!-- Barra de busca -->
+    <div class="search-bar-wrapper">
+      <div class="search-icon">🔍</div>
+      <input type="text" id="search-input" class="search-input" placeholder="Buscar produtos..." oninput="setBusca(this.value)">
+      <button id="search-clear" class="search-clear" onclick="limparBusca()" style="display:none">✕</button>
+    </div>
+
     <div class="filtros" id="filtros"></div>
     <div id="produtos-container"><div class="loading"><div class="spinner"></div>Carregando produtos...</div></div>
   </div>
@@ -388,7 +401,7 @@ const PIX_KEY  = '85989014145';
 const PIX_NAME = 'MATHEUS GADELHA FRAGA';
 const API_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
 
-let produtos=[], cart=[], filtroAtivo='Todos';
+let produtos=[], cart=[], filtroAtivo='Todos', termoBusca='';
 let servicoSel=null, precServico=0, logistica=null;
 let diaSel=null, horarioSel=null, agendamentos={};
 let calAtual={ano:new Date().getFullYear(), mes:new Date().getMonth()};
@@ -441,9 +454,33 @@ function renderFiltros(){
   document.getElementById('filtros').innerHTML=cats.map(c=>`<button class="filtro-btn${c===filtroAtivo?' active':''}" onclick="setFiltro('${c}')">${getCatEmoji(c)} ${c}</button>`).join('');
 }
 function setFiltro(c){filtroAtivo=c;renderFiltros();renderProdutos();}
+function setBusca(valor){
+  termoBusca = valor;
+  document.getElementById('search-clear').style.display = valor ? 'block' : 'none';
+  renderProdutos();
+}
+function limparBusca(){
+  termoBusca = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  renderProdutos();
+}
 function renderProdutos(){
-  const lista=filtroAtivo==='Todos'?produtos:produtos.filter(p=>p.categoria===filtroAtivo);
-  if(!lista.length){document.getElementById('produtos-container').innerHTML='<div class="empty"><div class="empty-emoji">📭</div><p>Nenhum produto nessa categoria.</p></div>';return;}
+  let lista = filtroAtivo==='Todos' ? produtos : produtos.filter(p=>p.categoria===filtroAtivo);
+  if(termoBusca){
+    const t = termoBusca.toLowerCase().trim();
+    lista = lista.filter(p =>
+      p.nome.toLowerCase().includes(t) ||
+      p.categoria.toLowerCase().includes(t)
+    );
+  }
+  if(!lista.length){
+    const msg = termoBusca
+      ? `Nenhum produto encontrado para "<strong>${termoBusca}</strong>"`
+      : 'Nenhum produto nessa categoria.';
+    document.getElementById('produtos-container').innerHTML='<div class="empty"><div class="empty-emoji">🔍</div><p>'+msg+'</p></div>';
+    return;
+  }
   document.getElementById('produtos-container').innerHTML=`<div class="produtos-grid">${lista.map((p,i)=>{
     const imgBase=getImg(p.nome); const imgFoto=p.foto||''; const imgSrc=imgFoto||imgBase; const sem=p.estoque===0;
     return `<div class="produto-card" style="animation-delay:${i*.05}s">
@@ -477,12 +514,12 @@ function toggleCart(){
 }
 // Regras de upsell por categoria
 const UPSELL_RULES = {
-  'Ração':      ['Petisco','Higiene','Acessórios','Brinquedo'],
-  'Petisco':    ['Ração','Brinquedo','Acessórios'],
-  'Higiene':    ['Acessórios','Petisco','Ração'],
-  'Acessórios': ['Ração','Petisco','Higiene'],
-  'Medicamento':['Higiene','Ração'],
-  'Brinquedo':  ['Petisco','Acessórios'],
+  'Ração':       ['Petisco','Higiene','Acessórios','Medicamento','Brinquedo'],
+  'Petisco':     ['Ração','Brinquedo','Acessórios'],
+  'Higiene':     ['Acessórios','Medicamento','Petisco','Ração'],
+  'Acessórios':  ['Ração','Petisco','Higiene','Brinquedo'],
+  'Medicamento': ['Higiene','Ração','Petisco'],
+  'Brinquedo':   ['Petisco','Acessórios','Ração'],
 };
 
 function getSugestoes() {
