@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atacadao da Racao - Caucaia CE</title>
+<title>Atacadão da Ração - Caucaia CE</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -176,7 +176,7 @@ header{background:var(--preto);border-bottom:3px solid var(--amarelo);position:s
     <a class="logo" href="#" onclick="showTab('catalogo');return false">
       <div class="logo-icon">🐂</div>
       <div>
-        <div class="logo-name">Atacadao da Racao</div>
+        <div class="logo-name">Atacadão da Ração</div>
         <div class="logo-sub">Caucaia - Ceara</div>
       </div>
     </a>
@@ -194,7 +194,7 @@ header{background:var(--preto);border-bottom:3px solid var(--amarelo);position:s
   <div class="hero-bg-pattern"></div>
   <div class="hero-inner">
     <div>
-      <div class="hero-label">N 1 em Caucaia</div>
+      <div class="hero-label">Nº 1 em Caucaia</div>
       <h1>Para o seu<br><em>animal e campo</em></h1>
       <p>Racoes, agropecuarios, defensivos, piscinas e muito mais. Estoque atualizado em tempo real.</p>
       <div class="hero-tags">
@@ -207,7 +207,7 @@ header{background:var(--preto);border-bottom:3px solid var(--amarelo);position:s
       </div>
     </div>
     <div class="hero-stamp">
-      <div class="stamp-l1">ATACADAO</div>
+      <div class="stamp-l1">ATACADÃO</div>
       <div class="stamp-l2">MELHOR</div>
       <div class="stamp-l3">PRECO</div>
     </div>
@@ -217,7 +217,7 @@ header{background:var(--preto);border-bottom:3px solid var(--amarelo);position:s
 <div class="search-section">
   <div class="search-inner">
     <div class="search-wrap">
-      <div class="search-ico">Buscar</div>
+      <div class="search-ico">🔍</div>
       <input id="search-input" type="text" placeholder="Buscar produto ou categoria..." oninput="setBusca(this.value)">
       <button class="search-x" id="search-clear" onclick="limparBusca()">X</button>
     </div>
@@ -787,7 +787,7 @@ function finalizarPedido(){
     : tipoPag==='pix'
     ? ('Pix | Chave: 85989014145 | Nome: MATHEUS GADELHA FRAGA')
     : 'Cartao na entrega';
-  var msg = encodeURIComponent('=== PEDIDO ATACADAO DA RACAO ===') + nl + nl +
+  var msg = encodeURIComponent('=== PEDIDO ATACADÃO DA RAÇÃO ===') + nl + nl +
     encodeURIComponent('Cliente: ' + nome) + nl + nl +
     encodeURIComponent('--- ITENS ---') + nl +
     encodeURIComponent(itens) + nl + nl +
@@ -913,7 +913,7 @@ function confirmarAgendamento(){
   }
   var nl = '%0A';
   var logTxt = logistica==='buscar' ? 'Busca inclusa (+R$ 15,00)' : 'Cliente vai levar na loja';
-  var msg = encodeURIComponent('=== AGENDAMENTO ATACADAO DA RACAO ===') + nl + nl +
+  var msg = encodeURIComponent('=== AGENDAMENTO ATACADÃO DA RAÇÃO ===') + nl + nl +
     encodeURIComponent('Cliente:   ' + nome) + nl +
     encodeURIComponent('Pet:       ' + pet) + nl +
     (tel ? encodeURIComponent('Telefone:  ' + tel) + nl : '') + nl +
