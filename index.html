@@ -384,6 +384,7 @@ footer{background:var(--azul);border-top:4px solid var(--vermelho);padding:24px 
   </div>
   <div class="step-title" style="margin-top:0">1. Seu nome</div>
   <div class="form-group"><input id="ck-nome" placeholder="Nome completo"></div>
+  <div class="form-group"><label>WhatsApp</label><input id="ck-wpp" type="tel" placeholder="(85) 99999-9999" maxlength="15" oninput="mascaraFone(this)"></div>
   <div class="step-title">2. Entrega ou Retirada?</div>
   <div class="radio-group">
     <label class="radio-opt" id="opt-retirada" onclick="selEntrega('retirada')"><div class="ro-emoji">🏪</div><div class="ro-label">Retirar</div><div class="ro-sub">Sem frete</div></label>
@@ -591,9 +592,12 @@ function selTroco(t){tipoTroco=t;['nao','sim'].forEach(function(x){document.getE
 function atualizarResumo(){var sub=cart.reduce(function(a,i){return a+i.preco*i.qty;},0);var frete=tipoEntrega==='entrega'?5:0;document.getElementById('resumo-ck').innerHTML='<div class="info-box"><strong>Resumo:</strong><br>Subtotal: R$ '+sub.toFixed(2)+'<br>'+(frete?'Frete: R$ 5,00<br>':'')+'<strong style="color:var(--azul)">Total: R$ '+(sub+frete).toFixed(2)+'</strong></div>';}
 function mascaraCEP(el){var v=el.value.replace(/[^0-9]/g,'');if(v.length>5)v=v.slice(0,5)+'-'+v.slice(5,8);el.value=v;}
 async function buscarCEP(){var cep=document.getElementById('ck-cep').value.replace(/[^0-9]/g,'');if(cep.length!==8){alert('CEP inválido!');return;}try{var r=await fetch('https://viacep.com.br/ws/'+cep+'/json/');var d=await r.json();if(d.erro){alert('CEP não encontrado!');return;}document.getElementById('ck-rua').value=d.logradouro||'';document.getElementById('ck-bairro').value=d.bairro||'';document.getElementById('end-res').style.display='block';}catch(e){alert('Erro ao buscar CEP.');}}
+function mascaraFone(i){var v=i.value.replace(/\D/g,'');if(v.length<=10)v=v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');else v=v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');i.value=v;}
 async function finalizarPedido(){
   var nome = document.getElementById('ck-nome').value.trim();
+  var wpp  = document.getElementById('ck-wpp').value.trim();
   if(!nome){alert('Informe seu nome!');return;}
+  if(!wpp){alert('Informe seu WhatsApp!');return;}
   if(!tipoEntrega){alert('Selecione entrega ou retirada!');return;}
   if(!tipoPag){alert('Selecione a forma de pagamento!');return;}
   if(tipoEntrega==='entrega'&&!document.getElementById('ck-rua').value){
@@ -623,7 +627,7 @@ async function finalizarPedido(){
       body   : JSON.stringify({
         tipo     : 'pedido',
         cliente  : nome,
-        telefone : '',
+        telefone : wpp,
         itens    : cart,
         subtotal : sub.toFixed(2),
         frete    : frete,
@@ -647,7 +651,8 @@ async function finalizarPedido(){
 
   var msg =
     encodeURIComponent('=== PEDIDO ATACADÃO DA RAÇÃO O XIXICO ===')+nl+nl+
-    encodeURIComponent('Cliente: '+nome)+nl+nl+
+    encodeURIComponent('Cliente: '+nome)+nl+
+    encodeURIComponent('WhatsApp: '+wpp)+nl+nl+
     encodeURIComponent('--- ITENS ---')+nl+itens+nl+nl+
     encodeURIComponent('Subtotal:  R$ '+sub.toFixed(2))+nl+
     (frete?encodeURIComponent('Frete:     R$ 5,00')+nl:'')+
